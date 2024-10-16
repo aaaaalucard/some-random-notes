@@ -13,7 +13,7 @@ func main() {
   serverAPI := options.ServerAPI(options.ServerAPIVersion1)
   opts := options.Client().ApplyURI("mongodb+srv://test:<db_password>@dedicatedcluster-172455.ukz8e.mongodb.net/?retryWrites=true&w=majority&appName=DedicatedCluster-1724559993").SetServerAPIOptions(serverAPI)
   //opts := options.Client().ApplyURI("mongodb+srv://asdfasdf:******@dedicatedcluster-172455.ukz8e.mongodb.net/?retryWrites=true&w=majority&appName=DedicatedCluster-1724559993").SetServerAPIOptions(serverAPI)
-  
+  //opts := options.Client().ApplyURI("mongodb+srv://hankyuan:@@@@::::@cluster0.kcskq.mongodb.net/?retryWrites=true&w=majority&appName=DedicatedCluster-1724559993").SetServerAPIOptions(serverAPI)
   // Create a new client and connect to the server
   client, err := mongo.Connect(context.TODO(), opts)
   if err != nil {

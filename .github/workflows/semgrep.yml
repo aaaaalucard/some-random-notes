@@ -1,0 +1,43 @@
+name: Semgrep Scan
+
+on:
+  pull_request:
+    types:
+      - opened
+      - closed
+  issue_comment:
+    types: [created]
+
+jobs:
+  semgrep-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Semgrep
+        run: |
+          python3 -m pip install semgrep
+
+      - name: Run Semgrep Scan
+        if: |
+          github.event_name == 'pull_request' ||
+          (
+            github.event_name == 'issue_comment' &&
+            contains(github.event.comment.body, 'semgrep rescan')
+          )
+        run: |
+          semgrep --config .semgrep.yml --json --output semgrep-results.json
+
+      - name: Upload Semgrep Results
+        if: success()
+        uses: actions/upload-artifact@v2
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
+
+      - name: Post Results in PR Comment
+        if: github.event_name == 'pull_request' && contains(steps.semgrep-scan.outputs.SCAN_SUMMARY, 'failed')
+        run: |
+          COMMENT_BODY=$(cat semgrep-results.json | jq -r 'map("\(.path): Line \(.start.line) - \(.extra.message)") | join("\n")')
+          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -d "{\"body\": \"### Semgrep Scan Results\n\n$COMMENT_BODY\"}" ${{ github.event.pull_request.comments_url }}

@@ -5,6 +5,8 @@ on:
     types:
       - opened
       - closed
+      - reopened
+      - synchronize
   issue_comment:
     types: [created]
 
@@ -30,14 +32,19 @@ jobs:
           semgrep --config .semgrep.yml --json --output semgrep-results.json
 
       - name: Upload Semgrep Results
-        if: success()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3  # Updated to use @v3
         with:
           name: semgrep-results
           path: semgrep-results.json
 
       - name: Post Results in PR Comment
-        if: github.event_name == 'pull_request' && contains(steps.semgrep-scan.outputs.SCAN_SUMMARY, 'failed')
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          COMMENT_BODY=$(cat semgrep-results.json | jq -r 'map("\(.path): Line \(.start.line) - \(.extra.message)") | join("\n")')
-          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -d "{\"body\": \"### Semgrep Scan Results\n\n$COMMENT_BODY\"}" ${{ github.event.pull_request.comments_url }}
+          if jq -e '.[] | length > 0' semgrep-results.json > /dev/null; then
+            COMMENT_BODY=$(jq -r 'map("\(.path): Line \(.start.line) - \(.extra.message)") | join("\n")' semgrep-results.json)
+            curl -X POST -H "Authorization: token $GITHUB_TOKEN" -d "{\"body\": \"### Semgrep Scan Results\n\n$COMMENT_BODY\"}" ${{ github.event.pull_request.comments_url }}
+          else
+            echo "No issues found by Semgrep"
+          fi
